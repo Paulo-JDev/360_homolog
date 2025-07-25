@@ -184,7 +184,67 @@ class DatabaseATASManager:
             return df
         except Exception as e:
             QMessageBox.warning(None, "Erro", f"Erro ao carregar a tabela '{table_name}': {e}")
-            return None  
+            return None 
+        
+    # Dentro da classe DatabaseATASManager, em database.py
+
+    def substituir_dados_controle_atas(self, df):
+        """
+        Substitui completamente os dados da tabela 'controle_atas' por um novo DataFrame.
+        Esta operação é atômica: ou tudo funciona, ou nada é alterado.
+        """
+        try:
+            with self.connect_to_database() as conn:
+                cursor = conn.cursor()
+                
+                # 1. Apaga a tabela antiga
+                cursor.execute("DROP TABLE IF EXISTS controle_atas")
+                logging.info("Tabela 'controle_atas' antiga removida.")
+                
+                # 2. Recria a tabela com a estrutura correta
+                cursor.execute("""
+                    CREATE TABLE controle_atas (
+                        grupo TEXT,
+                        item TEXT PRIMARY KEY,
+                        catalogo TEXT,
+                        descricao TEXT,
+                        descricao_detalhada TEXT,
+                        unidade TEXT,
+                        quantidade TEXT,
+                        valor_estimado TEXT,
+                        valor_homologado_item_unitario TEXT,
+                        percentual_desconto TEXT,
+                        valor_estimado_total_do_item TEXT,
+                        valor_homologado_total_item TEXT,
+                        marca_fabricante TEXT,
+                        modelo_versao TEXT,
+                        situacao TEXT,
+                        uasg TEXT,
+                        orgao_responsavel TEXT,
+                        num_pregao TEXT,
+                        ano_pregao TEXT,
+                        srp TEXT,
+                        objeto TEXT,
+                        melhor_lance TEXT,
+                        valor_negociado TEXT,
+                        ordenador_despesa TEXT,
+                        empresa TEXT,
+                        cnpj TEXT
+                    )
+                """)
+                logging.info("Tabela 'controle_atas' recriada com sucesso.")
+                
+                # 3. Insere os novos dados do DataFrame na tabela recém-criada
+                df.to_sql("controle_atas", conn, if_exists='append', index=False)
+                logging.info(f"{len(df)} registros inseridos em 'controle_atas'.")
+                
+                conn.commit()
+                return True, "Dados carregados com sucesso!"
+
+        except Exception as e:
+            logging.error(f"Falha ao substituir dados da tabela 'controle_atas': {e}")
+            # Se houvesse uma transação, aqui ocorreria um rollback automático ao sair do 'with'.
+            return False, f"Erro ao carregar dados: {e}"
 
     def criar_tabela_itens_pregao(self, numeroCompra, anoCompra, unidadeOrgaoCodigoUnidade):
         table_name = f"resultAPI_{numeroCompra}_{anoCompra}_{unidadeOrgaoCodigoUnidade}"

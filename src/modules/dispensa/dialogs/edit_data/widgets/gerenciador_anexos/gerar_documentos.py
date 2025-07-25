@@ -22,45 +22,85 @@ class ConsolidarDocumentos(QObject):
     pastas_criadas = pyqtSignal(bool) 
 
     def __init__(self, dados, icons, documentos_encontrados, status_label=None):
-        super().__init__()  # Inicializa o QObject
+        super().__init__()
         self.dados = dados
         self.icons = icons
         self.config = load_config_path_id()
-        self.pasta_base = Path(self.config.get('pasta_base', str(Path.home() / 'Desktop')))
         self.relacao_documentos_encontrados = documentos_encontrados
-        # Configura self.pasta_base para incluir o nome da pasta completo
-        id_processo = self.dados.get('id_processo', 'desconhecido').replace("/", "-")
-        objeto = self.dados.get('objeto', 'objeto_desconhecido').replace("/", "-")
-        self.pasta_base = Path(self.config.get('pasta_base', str(Path.home() / 'Desktop'))) / f"{id_processo} - {objeto}"
+        
+        # Define o diretório raiz (ex: Desktop) a partir da configuração
+        self.diretorio_raiz = Path(self.config.get('pasta_base', str(Path.home() / 'Desktop')))
+        
+        # O nome da pasta do processo será definido dinamicamente
+        self.nome_pasta = "" 
+        self.pasta_processo = "" # Será o caminho completo (diretorio_raiz + nome_pasta)
 
-        # Verifica se `dados` é um DataFrame
-        if isinstance(self.dados, pd.DataFrame):
+        # Verifica se 'dados' é um DataFrame ou dict
+        if isinstance(self.dados, pd.DataFrame) and not self.dados.empty:
             self.id_processo = self.dados['id_processo'].iloc[0]
             self.objeto = self.dados['objeto'].iloc[0]
-        elif isinstance(self.dados, dict):  # Caso seja um dicionário
+        elif isinstance(self.dados, dict):
             self.id_processo = self.dados.get('id_processo', 'Desconhecido')
             self.objeto = self.dados.get('objeto', 'Desconhecido')
         else:
-            raise ValueError("O tipo de 'dados' não é suportado. Esperado DataFrame ou dict.")
+            # Define valores padrão se os dados forem inválidos para evitar erros
+            self.id_processo = "Processo_Invalido"
+            self.objeto = "Objeto_Invalido"
+            # Opcional: Levantar um erro se os dados são essenciais
+            # raise ValueError("O tipo de 'dados' não é suportado ou está vazio.")
 
-        # Exemplo de dados de índice
+        # 2. Define os caminhos como objetos Path desde o início
+        self.diretorio_raiz = Path(self.config.get('pasta_base', str(Path.home() / 'Desktop')))
+        
+        # Formata o nome da pasta do processo
+        id_processo_formatado = str(self.id_processo).replace("/", "-")
+        objeto_formatado = str(self.objeto).replace("/", "-")
+        self.nome_pasta = f"{id_processo_formatado} - {objeto_formatado}"
+        
+        # 3. Garante que self.pasta_processo seja um objeto Path IMEDIATAMENTE
+        self.pasta_processo = self.diretorio_raiz / self.nome_pasta
+
+        # Exemplo de dados de índice (mantido)
         self.data = {
-            'id_processo': 'DE 15/2024',
-            'tipo': 'DE',
-            'numero': '50',
-            'ano': '2024',
-            'situacao': 'Planejamento, Sessão Pública, Concluído',
-            'nup': '62055.00055/2024-01',
-            'material_servico': 'Material ou Serviço',
-            'objeto': 'Suprimentos de informática',
-            'vigencia': '12 meses a partir da assinatura',
-            'data_sessao': '15/10/2024',
-            'operador': 'João da Silva',
-            'criterio_julgamento': 'Menor preço, Técnica e preço',
+            'id_processo': 'DE 15/2024', 'tipo': 'DE', 'numero': '50', 'ano': '2024',
+            'situacao': 'Planejamento, Sessão Pública, Concluído', 'nup': '62055.00055/2024-01',
+            'material_servico': 'Material ou Serviço', 'objeto': 'Suprimentos de informática',
+            'vigencia': '12 meses a partir da assinatura', 'data_sessao': '15/10/2024',
+            'operador': 'João da Silva', 'criterio_julgamento': 'Menor preço, Técnica e preço',
             'com_disputa': 'Sim, Não',
         }
-
+        
+        # Chama a função para definir os nomes e caminhos pela primeira vez
         self.atualizar_nome_pasta()
+
+    def atualizar_nome_pasta(self):
+        # Garante que os dados sejam do tipo correto para extração
+        if isinstance(self.dados, dict):
+            id_processo = self.dados.get('id_processo', 'desconhecido').replace("/", "-")
+            objeto = self.dados.get('objeto', 'objeto_desconhecido').replace("/", "-")
+        else: # Assume DataFrame
+            id_processo = self.dados['id_processo'].iloc[0].replace("/", "-")
+            objeto = self.dados['objeto'].iloc[0]
+
+        # Define as variáveis de caminho de forma clara
+        self.nome_pasta = f"{id_processo} - {objeto}"
+        self.pasta_processo = self.diretorio_raiz / self.nome_pasta
+
+    def validar_e_definir_pasta_base(self):
+        """Verifica se o caminho base da configuração é válido. Se não, pede um novo."""
+        caminho_salvo = self.config.get('pasta_base')
+
+        # Se não há caminho salvo ou o caminho não existe, pede para o usuário selecionar um novo
+        if not caminho_salvo or not Path(caminho_salvo).exists():
+            QMessageBox.warning(None, "Diretório Base Inválido",
+                                f"O diretório base ('{caminho_salvo}') não foi encontrado.\n\n"
+                                "Por favor, selecione um novo diretório base para salvar os documentos.")
+            
+            # Chama a função que abre o diálogo para escolher pasta
+            self.alterar_diretorio_base()
+        else:
+            # Se o caminho é válido, define-o
+            self.pasta_base = Path(caminho_salvo)
 
     def atualizar_nome_pasta(self):
         id_processo = self.dados.get('id_processo', 'desconhecido').replace("/", "-")
@@ -89,20 +129,21 @@ class ConsolidarDocumentos(QObject):
         return self.verificar_pastas(self.pasta_base, criar=False)
 
     def verificar_pastas(self, criar=False):
+        # USA self.pasta_processo para criar a estrutura DENTRO da pasta do processo
         pastas_necessarias = [
-            self.pasta_base / '1. Autorizacao',
-            self.pasta_base / '2. CP e anexos',
-            self.pasta_base / '3. Aviso',
-            self.pasta_base / '2. CP e anexos' / 'DFD',
-            self.pasta_base / '2. CP e anexos' / 'DFD' / 'Anexo A - Relatorio Safin',
-            self.pasta_base / '2. CP e anexos' / 'DFD' / 'Anexo B - Especificações e Quantidade',
-            self.pasta_base / '2. CP e anexos' / 'TR',
-            self.pasta_base / '2. CP e anexos' / 'TR' / 'Pesquisa de Preços',
-            self.pasta_base / '2. CP e anexos' / 'Declaracao de Adequação Orçamentária',
-            self.pasta_base / '2. CP e anexos' / 'Declaracao de Adequação Orçamentária' / 'Relatório do PDM-Catser',
-            self.pasta_base / '2. CP e anexos' / 'ETP',
-            self.pasta_base / '2. CP e anexos' / 'MR',
-            self.pasta_base / '2. CP e anexos' / 'Justificativas Relevantes',
+            self.pasta_processo / '1. Autorizacao',
+            self.pasta_processo / '2. CP e anexos',
+            self.pasta_processo / '3. Aviso',
+            self.pasta_processo / '2. CP e anexos' / 'DFD',
+            self.pasta_processo / '2. CP e anexos' / 'DFD' / 'Anexo A - Relatorio Safin',
+            self.pasta_processo / '2. CP e anexos' / 'DFD' / 'Anexo B - Especificações e Quantidade',
+            self.pasta_processo / '2. CP e anexos' / 'TR',
+            self.pasta_processo / '2. CP e anexos' / 'TR' / 'Pesquisa de Preços',
+            self.pasta_processo / '2. CP e anexos' / 'Declaracao de Adequação Orçamentária',
+            self.pasta_processo / '2. CP e anexos' / 'Declaracao de Adequação Orçamentária' / 'Relatório do PDM-Catser',
+            self.pasta_processo / '2. CP e anexos' / 'ETP',
+            self.pasta_processo / '2. CP e anexos' / 'MR',
+            self.pasta_processo / '2. CP e anexos' / 'Justificativas Relevantes',
         ]
 
         # Criação das pastas, se necessário
@@ -118,8 +159,8 @@ class ConsolidarDocumentos(QObject):
         return pastas_existem
 
     def verificar_pdfs_existentes(self):
-        base_path = self.pasta_base
-        print(f"Base path para verificação de PDFs: {base_path}")  # Imprime o caminho base
+        base_path = self.pasta_processo
+        print(f"Base path para verificação de PDFs: {base_path}")
 
         resultados = []
 
@@ -281,7 +322,7 @@ class ConsolidarDocumentos(QObject):
             pdf.write(10, f"Exemplo: {example}\n")  # Adiciona texto com nova linha
 
         # Salva o PDF
-        pdf_path = self.pasta_base / "indice_templates.pdf"
+        pdf_path = self.pasta_processo / "indice_templates.pdf"
         pdf.output(str(pdf_path))
 
         print(f"Arquivo PDF de índices criado: {pdf_path}")
@@ -301,11 +342,15 @@ class ConsolidarDocumentos(QObject):
     def alterar_diretorio_base(self):
         new_dir = QFileDialog.getExistingDirectory(None, "Selecione o Novo Diretório Base", str(Path.home()))
         if new_dir:
-            self.pasta_base = Path(new_dir)
+            self.pasta_base = Path(new_dir)  # Garante que o atributo seja atualizado
             self.config['pasta_base'] = str(self.pasta_base)
             save_config("pasta_base", str(self.pasta_base))
-            QMessageBox.information(None, "Diretório Base Alterado", f"O novo diretório base foi alterado para: {self.pasta_base}")
-
+            QMessageBox.information(None, "Diretório Base Alterado", f"O novo diretório base foi definido como: {self.pasta_base}")
+        else:
+            # Caso o usuário cancele, usa a pasta Desktop como padrão para evitar erros
+            self.pasta_base = Path.home() / 'Desktop'
+            QMessageBox.warning(None, "Nenhum Diretório Selecionado", f"Nenhum diretório foi selecionado. Usando a Área de Trabalho como padrão: {self.pasta_base}")
+    
     def abrir_pasta_base(self):
         try:
             os.startfile(self.pasta_base)
@@ -337,19 +382,53 @@ class ConsolidarDocumentos(QObject):
         pdf_path = docx_path.with_suffix('.pdf')
         
         if sys.platform.startswith("win"):
-            import win32com.client
-            word = win32com.client.Dispatch("Word.Application")
+            word = None
             doc = None
             try:
-                doc = word.Documents.Open(str(docx_path))
-                doc.SaveAs(str(pdf_path), FileFormat=17)
+                # Importa as bibliotecas necessárias para a automação
+                import win32com.client
+                import pythoncom
+
+                # Inicializa a comunicação COM para esta thread (essencial em apps com GUI)
+                pythoncom.CoInitialize()
+
+                # Inicia o Word. Para depurar, você pode remover o comentário da linha abaixo
+                # para ver o que o Word está fazendo.
+                word = win32com.client.Dispatch("Word.Application")
+                # word.Visible = True 
+
+                # Abre o documento usando o caminho absoluto para evitar ambiguidades
+                doc = word.Documents.Open(str(docx_path.resolve()))
+                
+                # Salva o documento como PDF
+                doc.SaveAs(str(pdf_path.resolve()), FileFormat=17) # 17 é o código para PDF
+
+                # COMANDO CRÍTICO: Fecha o documento antes de fechar o Word.
+                # O parâmetro SaveChanges=0 diz ao Word para NÃO salvar nenhuma alteração
+                # no template (causa comum de caixas de diálogo ocultas).
+                doc.Close(SaveChanges=0)
+                
             except Exception as e:
-                raise e
+                # Gera uma mensagem de erro mais detalhada no console
+                error_message = f"Falha na conversão para PDF: {e}\nDocumento: {docx_path}"
+                print(error_message)
+                # Propaga o erro para que o resto do programa saiba que a conversão falhou
+                raise Exception(error_message)
+                
             finally:
-                if doc is not None:
-                    doc.Close()
-                word.Quit()
+                # Este bloco SEMPRE será executado, mesmo que ocorra um erro.
+                # Ele garante que o Word seja fechado e os recursos liberados.
+                if word is not None:
+                    word.Quit()
+                
+                # Libera os objetos COM da memória para evitar processos zumbis
+                doc = None
+                word = None
+                
+                # Finaliza a comunicação COM
+                pythoncom.CoUninitialize()
         else:
+            # Bloco para Linux/macOS permanece o mesmo
             try:
                 comando = [
                     "libreoffice",
@@ -363,7 +442,8 @@ class ConsolidarDocumentos(QObject):
                 raise e
 
         if not pdf_path.exists():
-            raise FileNotFoundError(f"O arquivo PDF não foi criado: {pdf_path}")
+            raise FileNotFoundError(f"O arquivo PDF não foi criado após a conversão: {pdf_path}")
+        
         return pdf_path
 
     # def convert_to_pdf(self, docx_path):
@@ -550,13 +630,10 @@ class ConsolidarDocumentos(QObject):
         
         self.nome_pasta = f"{id_processo} - {objeto}"
         
-        if 'pasta_base' not in self.config:
-            self.alterar_diretorio_base()
-            
-        pasta_base = Path(self.config['pasta_base']) / self.nome_pasta / subfolder_name
-        pasta_base.mkdir(parents=True, exist_ok=True)
+        pasta_destino = self.pasta_processo / subfolder_name
+        pasta_destino.mkdir(parents=True, exist_ok=True)
         
-        save_path = pasta_base / f"{id_processo} - {file_description}.docx"
+        save_path = pasta_destino / f"{id_processo} - {file_description}.docx"
         return template_path, save_path
         
     def gerar_e_abrir_documento(self, template_type, subfolder_name, file_description):

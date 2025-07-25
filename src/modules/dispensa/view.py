@@ -178,11 +178,14 @@ class CustomItemDelegate(QStyledItemDelegate):
             # Define o mapeamento de ícones
             icon_key = {
                 'Planejamento': 'business',
-                'Aprovado': 'verify_menu',
+                #'Aprovado': 'verify_menu',
+                'Republicado': 'external-link_azul', # Novos
                 'Sessão Pública': 'session',
                 'Homologado': 'deal',
-                'Empenhado': 'emenda_parlamentar',
-                'Concluído': 'aproved',
+                #'Empenhado': 'emenda_parlamentar',
+                'Deserto': 'desert', # Novos
+                #'Concluído': 'aproved',
+                'Fracassado' : 'head_skull', # Novos
                 'Arquivado': 'archive'
             }.get(situacao)
 

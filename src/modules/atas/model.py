@@ -164,45 +164,46 @@ class CustomSqlTableModel(QSqlTableModel):
             self.close_connection()
 
     def carregar_tabela(self): 
-        conn = None  # Inicializa conn como None
         try:
-            # Seleciona o arquivo para carregar
-            caminho_arquivo, _ = QFileDialog.getOpenFileName(None, "Carregar Tabela", "", "Arquivos Excel (*.xlsx);;Todos os Arquivos (*)")
+            # 1. Seleciona o arquivo (esta parte está igual, funciona perfeitamente)
+            caminho_arquivo, _ = QFileDialog.getOpenFileName(
+                None, 
+                "Carregar Tabela", 
+                "", 
+                "Arquivos Excel (*.xlsx);;Todos os Arquivos (*)"
+            )
             if not caminho_arquivo:
-                return None  # Se o usuário cancelar o diálogo, sai da função
+                return  # Usuário cancelou, então não fazemos nada
 
-            # Carrega o arquivo Excel, filtrando apenas as colunas desejadas
-            tabela = pd.read_excel(caminho_arquivo, usecols=['item', 'catalogo', 'descricao', 'descricao_detalhada'])
+            # 2. Carrega o arquivo Excel
+            tabela = pd.read_excel(caminho_arquivo)
 
-            # Conecta ao banco de dados
-            conn = self.database_manager.connect_to_database()
-            cursor = conn.cursor()
+            # 3. Garante que todas as colunas do banco de dados existam no DataFrame.
+            #    Se uma coluna não existir na planilha, ela é criada com valores vazios.
+            for col in self.column_names: # self.column_names já existe na sua classe
+                if col not in tabela.columns:
+                    tabela[col] = None
 
-            # Exclui a tabela existente, se houver
-            cursor.execute("DROP TABLE IF EXISTS controle_atas")
-            conn.commit()
-            print("Tabela 'controle_atas' excluída com sucesso.")
+            # Garante que as colunas no DataFrame estejam na mesma ordem que no banco
+            tabela = tabela[self.column_names]
 
-            # Recria a tabela usando o método do GerarAtasModel
-            if self.gerar_atas_model:
-                self.gerar_atas_model.create_table_if_not_exists()
-            
-            # Insere os novos dados no banco de dados
-            tabela.to_sql("controle_atas", conn, if_exists='append', index=False)
-            print("Dados inseridos no banco com sucesso.")
+            # 4. Chama a nova função centralizada para fazer o trabalho no banco de dados
+            #    O self.database_manager é o objeto que contém a nova função.
+            sucesso, mensagem = self.database_manager.substituir_dados_controle_atas(tabela)
 
-            # Atualiza o modelo para refletir as mudanças
-            self.select()  # Recarrega os dados do banco
-            self.tabelaCarregada.emit()  # Emite o sinal de que a tabela foi carregada
+            # 5. Informa o usuário e atualiza a tela
+            if sucesso:
+                QMessageBox.information(None, "Sucesso", mensagem)
+                # Atualiza o modelo na tela para refletir as mudanças do banco
+                self.select()
+                self.tabelaCarregada.emit()
+            else:
+                QMessageBox.critical(None, "Erro de Banco de Dados", mensagem)
 
+        except FileNotFoundError:
+            QMessageBox.critical(None, "Erro", "Arquivo não encontrado. Verifique o caminho.")
         except Exception as e:
-            print(f"Erro ao carregar a tabela: {e}")
-            QMessageBox.critical(None, "Erro", f"Erro ao carregar a tabela: {e}")
-
-        finally:
-            if conn:  # Verifica se conn foi atribuído antes de fechar
-                conn.close()
-
+            QMessageBox.critical(None, "Erro Crítico", f"Ocorreu um erro inesperado ao carregar a planilha: {e}")
     def abrir_tabela_nova(self):
         # Define o caminho do arquivo Excel
         file_path = os.path.join(os.getcwd(), "tabela_nova.xlsx")

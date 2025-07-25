@@ -63,8 +63,8 @@ class TabelaResumidaManager:
 
                 # Ordenar e estruturar conforme necessário
                 status_ordem = {
-                    'Arquivado': 1, 'Concluído': 2, 'Empenhado': 3,
-                    'Homologado': 4, 'Sessão Pública': 5, 'Aprovado': 6, 'Planejamento': 7
+                    'Arquivado': 1, 'Fracassado': 2, 'Deserto': 3,
+                    'Homologado': 4, 'Sessão Pública': 5, 'Republicado': 6, 'Planejamento': 7
                 }
                 self.df_resumido['Status_Value'] = self.df_resumido['Status'].map(status_ordem).fillna(0)
                 self.df_resumido = self.df_resumido.sort_values(by='Status_Value', ascending=False).drop(columns=['Status_Value'])

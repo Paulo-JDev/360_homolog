@@ -1107,7 +1107,7 @@ class EditarDadosWindow(QMainWindow):
         # Cria um combobox para a situação
         self.situacao_combo = QComboBox()
         self.situacao_combo.setStyleSheet("font-size: 14px")
-        self.situacao_combo.addItems(["Planejamento", "Aprovado", "Sessão Pública", "Homologado", "Empenhado", "Concluído", "Arquivado"])
+        self.situacao_combo.addItems(["Planejamento", "Republicado", "Sessão Pública", "Homologado", "Deserto", "Fracassado", "Arquivado"])
         self.situacao_combo.setCurrentText(self.dados.get('situacao', 'Planejamento'))
         hlayout_titulo.addWidget(self.situacao_combo)
 
@@ -1558,7 +1558,7 @@ class EditarDadosWindow(QMainWindow):
     def verificar_arquivo_pdf(self, pasta):
         arquivos_pdf = []
         if not pasta.exists():
-            print(f"Pasta não encontrada: {pasta}")
+            print(f"Pasta não encontrada(problema ta aqui): {pasta}")
             return None
         for arquivo in pasta.iterdir():
             if arquivo.suffix.lower() == ".pdf":
