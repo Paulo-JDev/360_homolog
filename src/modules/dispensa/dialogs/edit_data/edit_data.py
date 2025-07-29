@@ -1614,7 +1614,7 @@ class EditarDadosWindow(QMainWindow):
         # Verifica as pastas necessárias
         pastas_necessarias = self.consolidador.verificar_pastas(criar=False)
         # Abre o diálogo para adicionar PDF
-        pdf_add_dialog = PDFAddDialog(self.dados, self.icons, pastas_necessarias, self.consolidador.pasta_base, self)
+        pdf_add_dialog = PDFAddDialog(self.dados, self.icons, pastas_necessarias, self.consolidador.pasta_processo, self)
         if pdf_add_dialog.exec():
             cp_number = self.cp_edit.text()  # Pega o número de CP, se houver
             print(f"Adicionar PDF para CP nº {cp_number}" if cp_number else "Adicionar PDF")

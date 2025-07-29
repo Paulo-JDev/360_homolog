@@ -3,6 +3,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from modules.utils.search_bar import setup_search_bar, MultiColumnFilterProxyModel
 from modules.utils.add_button import add_button
+from assets.styles.filtroano import *
 import pandas as pd
 
 class DispensaEletronicaWidget(QMainWindow):
@@ -89,7 +90,28 @@ class DispensaEletronicaWidget(QMainWindow):
         add_button("Excluir", "delete", self.deleteItem, layout, self.icons, tooltip="Excluir o item selecionado")
         add_button("Database", "data-server", self.dataManager, layout, self.icons, tooltip="Salva o dataframe em um arquivo Excel")
         add_button("Gráficos", "performance", self.salvar_graficos, layout, self.icons, tooltip="Carrega dados de uma tabela")
-        add_button("ConGes", "image-processing", self.salvar_print, layout, self.icons, tooltip="Abre o painel de controle do processo")
+        # 1. Cria um layout horizontal SÓ PARA O FILTRO
+        filtro_layout = QHBoxLayout()
+        filtro_layout.setContentsMargins(10, 0, 5, 0) # Margem Esquerda, Topo, Direita, Fundo
+        filtro_layout.setSpacing(5)
+
+        # 2. Cria o QLabel para o ícone "time.png"
+        icon_label = QLabel()
+        icon_label.setPixmap(self.icons['time'].pixmap(20, 20))
+        filtro_layout.addWidget(icon_label)
+
+        # 3. Cria a QComboBox, que agora ficará DENTRO do nosso layout de filtro
+        self.filtro_ano_combo = QComboBox()
+        self.filtro_ano_combo.setMinimumWidth(80)
+        # O estilo já está correto no arquivo filtroano.py
+        self.filtro_ano_combo.setStyleSheet(get_filtro_ano_combo_style())
+        self.filtro_ano_combo.setCursor(Qt.CursorShape.PointingHandCursor)
+        filtro_layout.addWidget(self.filtro_ano_combo)
+
+        # 4. Adiciona o layout do filtro (como se fosse um único widget) ao layout principal
+        layout.addLayout(filtro_layout)
+        
+        #add_button("ConGes", "image-processing", self.salvar_print, layout, self.icons, tooltip="Abre o painel de controle do processo")
 
     def refresh_model(self):
         """Atualiza a tabela com os dados mais recentes do banco de dados."""

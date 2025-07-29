@@ -21,7 +21,8 @@ class DispensaEletronicaController(QObject):
         self.edit_data_dialog = None
         self.model_add = model
         self.model = model.setup_model("controle_dispensas")
-        self.controle_om = CONTROLE_DADOS  # Atribui o caminho diretamente ao controle_om                
+        self.controle_om = CONTROLE_DADOS  # Atribui o caminho diretamente ao controle_om 
+        self.setup_year_filter() #filtro por ano               
         self.setup_connections()
 
     def setup_connections(self):
@@ -32,6 +33,47 @@ class DispensaEletronicaController(QObject):
         self.view.salvar_print.connect(self.handle_save_print)
         self.view.rowDoubleClicked.connect(self.handle_edit_item)
         self.view.request_consulta_api.connect(self.consultar_api)
+        self.view.filtro_ano_combo.currentTextChanged.connect(self.apply_year_filter) # Conecta o sinal ao filtro de ano
+
+    # Adicione estes dois novos métodos completos à sua classe de controller
+
+    def setup_year_filter(self):
+        """
+        Busca os anos distintos no banco de dados e os adiciona à QComboBox na view.
+        """
+        # Acessa o db_manager através do model para buscar os anos
+        anos = self.model.database_manager.get_distinct_years()
+        
+        # Limpa a caixa de seleção para evitar duplicatas ao recarregar
+        self.view.filtro_ano_combo.clear()
+        
+        # Adiciona a opção "Todos" no topo da lista
+        self.view.filtro_ano_combo.addItem("Todos")
+        
+        # Adiciona os anos buscados do banco
+        if anos:
+            self.view.filtro_ano_combo.addItems(anos)
+
+    def apply_year_filter(self, year):
+        """
+        Aplica um filtro ao QSqlTableModel com base no ano selecionado.
+        """
+        # Adiciona um print para sabermos que a função foi chamada
+        print(f"Filtro de ano acionado. Ano selecionado: '{year}'")
+
+        if year == "Todos" or not year:
+            # Se "Todos" for selecionado, o filtro é uma string vazia
+            filter_str = ""
+        else:
+            # Cria a string de filtro para a cláusula WHERE do SQL.
+            # Ex: id_processo LIKE '%/2024'
+            filter_str = f"id_processo LIKE '%/{year}'"
+        
+        # Define o filtro no modelo. Até aqui, nada muda na tela.
+        self.model.setFilter(filter_str)
+        self.model.select()
+        print(f"Filtro aplicado. A tabela agora exibe {self.model.rowCount()} linhas.")
+        self.view.proxy_model.setYearFilter(year)
 
     def consultar_api(self, cnpj, ano, sequencial, uasg, numero):
         # Inicia o diálogo de consulta API com o parent `self.view`
@@ -60,6 +102,7 @@ class DispensaEletronicaController(QObject):
             item_data['situacao'] = 'Planejamento'
             self.model_add.insert_or_update_data(item_data)  # Salva no banco de dados
             self.view.refresh_model()   # Salva no banco de dados
+            self.setup_year_filter()
 
     def handle_delete_item(self):
         """Trata a ação de exclusão de um item selecionado."""

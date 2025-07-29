@@ -87,3 +87,16 @@ class DatabaseManager:
         """Exclui um registro da tabela 'controle_dispensas' pelo id_processo."""
         query = "DELETE FROM controle_dispensas WHERE id_processo = ?"
         return self.execute_update(query, (id_processo,))
+    
+    def get_distinct_years(self):
+        """Busca todos os anos distintos da tabela de dispensas."""
+        # A consulta extrai os 4 últimos caracteres da coluna 'id_processo'
+        query = "SELECT DISTINCT SUBSTR(id_processo, -4) FROM controle_dispensas ORDER BY 1 DESC"
+        try:
+            # Usando o método execute_query já existente na classe
+            rows = self.execute_query(query)
+            # Retorna uma lista de anos. Ex: ['2025', '2024']
+            return [row[0] for row in rows] if rows else []
+        except Exception as e:
+            logging.error(f"Erro ao buscar anos distintos: {e}")
+            return []

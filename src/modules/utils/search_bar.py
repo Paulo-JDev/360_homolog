@@ -6,21 +6,52 @@ class MultiColumnFilterProxyModel(QSortFilterProxyModel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.filter_regular_expression = QRegularExpression()
+        self.year_filter = ""
     
     def setFilterRegularExpression(self, regex):
         self.filter_regular_expression = regex
         self.invalidateFilter()  # Revalida o filtro sempre que o regex é atualizado
 
+    def setYearFilter(self, year):
+        """Novo método para definir o filtro de ano."""
+        # Se o ano for "Todos", o filtro é vazio, senão é o ano selecionado
+        self.year_filter = "" if year == "Todos" else year
+        self.invalidateFilter() # Força a reavaliação do filtro
+    
     def filterAcceptsRow(self, source_row, source_parent):
-        # Verifica o valor do filtro em cada coluna da linha
-        for column in range(self.sourceModel().columnCount()):
-            index = self.sourceModel().index(source_row, column, source_parent)
-            data = self.sourceModel().data(index, Qt.ItemDataRole.DisplayRole)
-            if data is not None:
-                data_str = str(data)
-                if self.filter_regular_expression.match(data_str).hasMatch():
-                    return True  # Mostra a linha se houver correspondência em qualquer coluna
-        return False  # Oculta a linha se não houver correspondência em nenhuma coluna
+        """
+        Verifica se uma linha deve ser exibida, checando AMBOS os filtros (ano e busca).
+        """
+        # --- 1. Lógica para o filtro de ANO ---
+        # Busca o dado da coluna 'id_processo' (coluna 1, conforme seu modelo)
+        year_index = self.sourceModel().index(source_row, 1, source_parent)
+        year_data = self.sourceModel().data(year_index, Qt.ItemDataRole.DisplayRole)
+        
+        # A linha passa no teste de ano se o filtro estiver vazio ("Todos")
+        # ou se o id_processo terminar com o ano selecionado.
+        year_match = not self.year_filter or (year_data and year_data.endswith(self.year_filter))
+
+        # Logica para o filtro de busca
+        self.search_regex = self.filter_regular_expression
+
+        if not self.search_regex.pattern():
+            search_match = True
+        else:
+            # Começa assumindo que não há correspondência com a busca
+            search_match = False
+            # Itera sobre todas as colunas da linha
+            for column in range(self.sourceModel().columnCount()):
+                index = self.sourceModel().index(source_row, column, source_parent)
+                data = self.sourceModel().data(index, Qt.ItemDataRole.DisplayRole)
+                
+                # Se encontrar uma correspondência, define como True e para o loop
+                if data and self.search_regex.match(str(data)).hasMatch():
+                    search_match = True
+                    break  # Otimização: para o loop assim que encontrar a primeira correspondência
+
+        # --- 3. Resultado Final ---
+        # A linha só é exibida se passar nos DOIS testes (year_match E search_match).
+        return year_match and search_match
 
 class ContratosMultiColumnFilterProxyModel(QSortFilterProxyModel):
     def __init__(self, *args, **kwargs):
