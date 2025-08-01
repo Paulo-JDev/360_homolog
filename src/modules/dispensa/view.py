@@ -92,37 +92,37 @@ class DispensaEletronicaWidget(QMainWindow):
         add_button("Excluir", "delete", self.deleteItem, layout, self.icons, tooltip="Excluir o item selecionado")
         add_button("Database", "data-server", self.dataManager, layout, self.icons, tooltip="Salva o dataframe em um arquivo Excel")
         add_button("Gráficos", "performance", self.salvar_graficos, layout, self.icons, tooltip="Carrega dados de uma tabela")
+        # 1. Criamos a QComboBox
+        self.filtro_ano_combo = QComboBox()
+        self.filtro_ano_combo.setMinimumWidth(100)
+        self.filtro_ano_combo.setFixedHeight(35)
+        self.filtro_ano_combo.setStyleSheet(get_filtro_ano_combo_style())
+        self.filtro_ano_combo.setEditable(True)
+        self.filtro_ano_combo.lineEdit().setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.filtro_ano_combo.lineEdit().setReadOnly(True)
+        
+        self.filtro_ano_combo.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+
+        # 3. Criamos o container (HoverFrame).
         normal_style = get_filtro_container_style()
         hover_style = get_filtro_container_hover_style()
-
-        # 2. Cria o HoverFrame, que age como o corpo do nosso botão
         filtro_container = HoverFrame(normal_style, hover_style)
         filtro_container.setFixedHeight(35)
         filtro_container.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        # 3. Cria o layout interno para o HoverFrame
+        # 4. Conectamos o clique no container (que agora receberá todos os cliques)
+        filtro_container.clicked.connect(self.filtro_ano_combo.showPopup)
+
+        # 5. Montamos o layout interno.
         filtro_layout = QHBoxLayout(filtro_container)
-        filtro_layout.setContentsMargins(5, 0, 5, 0) # Margens internas pequenas
+        filtro_layout.setContentsMargins(5, 0, 5, 0)
         filtro_layout.setSpacing(0)
-
-        # 4. Cria e configura a QComboBox
-        self.filtro_ano_combo = QComboBox()
-        # Define uma largura mínima para caber "Todos" ou "2025"
-        self.filtro_ano_combo.setMinimumWidth(100) 
-        self.filtro_ano_combo.setStyleSheet(get_filtro_ano_combo_style())
-        
-        # Centraliza o texto (forma programática e garantida)
-        self.filtro_ano_combo.setEditable(True)
-        self.filtro_ano_combo.lineEdit().setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.filtro_ano_combo.lineEdit().setReadOnly(True)
-
-        # Adiciona a QComboBox ao layout interno do container
         filtro_layout.addWidget(self.filtro_ano_combo)
-
-        # 5. Adiciona o container (nosso botão customizado) ao layout principal
-        layout.addWidget(filtro_container)
         
+        # 6. Adicionamos o container pronto ao layout principal.
+        layout.addWidget(filtro_container)
         #add_button("ConGes", "image-processing", self.salvar_print, layout, self.icons, tooltip="Abre o painel de controle do processo")
+        
 
     def refresh_model(self):
         """Atualiza a tabela com os dados mais recentes do banco de dados."""

@@ -76,11 +76,25 @@ class ConsolidarDocumentos(QObject):
     def atualizar_nome_pasta(self):
         # Garante que os dados sejam do tipo correto para extração
         if isinstance(self.dados, dict):
-            id_processo = self.dados.get('id_processo', 'desconhecido').replace("/", "-")
-            objeto = self.dados.get('objeto', 'objeto_desconhecido').replace("/", "-")
+            # --- INÍCIO DA CORREÇÃO ---
+            
+            # Pega o valor da chave 'id_processo'. Se for None, usa 'desconhecido' como padrão.
+            id_processo_bruto = self.dados.get('id_processo') or 'desconhecido'
+            
+            # Pega o valor da chave 'objeto'. Se for None, usa 'objeto_desconhecido' como padrão.
+            objeto_bruto = self.dados.get('objeto') or 'objeto_desconhecido'
+            
+            # Converte para string para garantir que o .replace() sempre funcione
+            id_processo = str(id_processo_bruto).replace("/", "-")
+            objeto = str(objeto_bruto).replace("/", "-")
+
+            # --- FIM DA CORREÇÃO ---
+
         else: # Assume DataFrame
             id_processo = self.dados['id_processo'].iloc[0].replace("/", "-")
-            objeto = self.dados['objeto'].iloc[0]
+            objeto_bruto = self.dados['objeto'].iloc[0]
+            # Garante que o objeto não seja None antes de usar .replace()
+            objeto = str(objeto_bruto if pd.notna(objeto_bruto) else 'objeto_desconhecido').replace("/", "-")
 
         # Define as variáveis de caminho de forma clara
         self.nome_pasta = f"{id_processo} - {objeto}"
