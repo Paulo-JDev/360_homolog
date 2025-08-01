@@ -1,12 +1,22 @@
 # Em... src/assets/styles/filtroano.py
 
 def get_filtro_container_style():
-    """Retorna o CSS para o QFrame que contém o ícone e a ComboBox."""
+    """Retorna o CSS para o estado NORMAL do container do filtro."""
     return """
         QFrame {
+            background-color: #F3F3F3;
             border: 1px solid #CCCCCC;
             border-radius: 5px;
-            background-color: #F3F3F3;
+        }
+    """
+
+def get_filtro_container_hover_style():
+    """Retorna o CSS para o estado HOVER (mouse em cima) do container."""
+    return """
+        QFrame {
+            background-color: #E0E0E0; /* Cor de fundo mais escura, igual ao hover dos botões */
+            border: 1px solid #CCCCCC;
+            border-radius: 5px;
         }
     """
 
@@ -14,15 +24,16 @@ def get_filtro_ano_combo_style():
     """Retorna o CSS para a QComboBox (sem borda e fundo transparente)."""
     return """
         QComboBox {
-            border: none; /* Remove a borda da ComboBox */
-            background-color: transparent; /* Fundo transparente para misturar com o Frame */
-            padding-left: 5px; /* Pequeno espaço interno à esquerda */
+            border: none;
+            background-color: transparent;
+            /* Padding zerado para que o alinhamento programático funcione perfeitamente */
+            padding: 0px; 
             color: #333333;
             font-size: 16px;
             font-weight: bold;
         }
         QComboBox::drop-down {
-            border: none; /* Remove a borda da seta */
+            border: none;
             padding-right: 5px;
         }
         QComboBox QAbstractItemView {
