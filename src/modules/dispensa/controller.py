@@ -1,5 +1,3 @@
-from modules.dispensa.model import DispensaEletronicaModel
-from modules.dispensa.view import DispensaEletronicaWidget
 from modules.dispensa.dialogs.add_item import AddItemDialog
 from modules.dispensa.dialogs.salvar_tabela import DataManager
 from modules.dispensa.dialogs.gerar_tabela import TabelaResumidaManager
@@ -230,17 +228,18 @@ class DispensaEletronicaController(QObject):
     
     def _preparar_email_homologado(self, data):
         """
-        Lê o template da mensagem, preenche com os dados e abre o cliente de e-mail.
+        Lê o template da mensagem, preenche com os dados e abre o
+        cliente de e-mail padrão do usuário.
         """
         destinatario_email = data.get("email", "")
         if not destinatario_email:
-            print("Não foi possível enviar a mensagem: campo de e-mail vazio.")
-            QMessageBox.warning(self.view, "E-mail não encontrado", 
-                                "Não foi possível preparar a mensagem automática pois o campo 'E-mail' do responsável não está preenchido.")
+            print("Não foi possível preparar a mensagem: campo de e-mail vazio.")
+            QMessageBox.warning(self.view, "E-mail não encontrado",
+                                "Não foi possível preparar a mensagem automática pois o campo 'E-mail' não está preenchido.")
             return
 
         try:
-            # Caminho para o novo arquivo de template
+            # Caminho para o arquivo de template
             caminho_template = TEMPLATE_DISPENSA_DIR / "mensagem_homologado.txt"
 
             # Lê o conteúdo do template
@@ -259,7 +258,7 @@ class DispensaEletronicaController(QObject):
             assunto_codificado = quote(assunto)
             mensagem_codificada = quote(mensagem_final)
 
-            # Cria o link 'mailto' e o abre no cliente de e-mail padrão do usuário
+            # Cria o link 'mailto' e o abre no cliente de e-mail padrão
             url_mailto = f"mailto:{destinatario_email}?subject={assunto_codificado}&body={mensagem_codificada}"
             webbrowser.open(url_mailto)
             
@@ -273,26 +272,7 @@ class DispensaEletronicaController(QObject):
             print(f"Ocorreu um erro inesperado ao preparar a mensagem: {e}")
             QMessageBox.critical(self.view, "Erro Inesperado",
                                  f"Ocorreu um erro ao preparar a mensagem automática: {e}")
-
-    def carregar_tabela(self):
-        filepath, _ = QFileDialog.getOpenFileName(self.view, "Abrir arquivo de tabela", "", "Tabelas (*.xlsx *.xls *.ods)")
-        if filepath:
-            try:
-                # Carrega o arquivo selecionado em um DataFrame
-                df = pd.read_excel(filepath)
-                self.validate_and_process_data(df)
-
-                # Insere ou atualiza os dados no banco de dados
-                for _, row in df.iterrows():
-                    data = row.to_dict()
-                    self.model_add.insert_or_update_data(data)
-                    self.view.refresh_model()
-                # Atualiza o modelo para refletir as alterações
-                self.model.select()
-                QMessageBox.information(self.view, "Carregamento concluído", "Dados carregados com sucesso.")
-            except Exception as e:
-                QMessageBox.warning(self.view, "Erro ao carregar", f"Ocorreu um erro ao carregar a tabela: {str(e)}")
-
+            
     def validate_and_process_data(self, df):
         required_columns = ['ID Processo', 'NUP', 'Objeto', 'uasg']
         if not all(col in df.columns for col in required_columns):
