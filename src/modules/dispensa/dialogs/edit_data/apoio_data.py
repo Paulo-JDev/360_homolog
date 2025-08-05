@@ -26,6 +26,16 @@ COLUNAS_LEGIVEIS = {
     'comunicacao_padronizada': 'Comunicação Padronizada (CP), Ex: 60-25',
 }
 
+VALID_SITUATIONS = [
+    "Planejamento",
+    "Republicado",
+    "Sessão Pública",
+    "Homologado",
+    "Deserto",
+    "Fracassado",
+    "Arquivado"
+]
+
 # Dicionário inverso
 COLUNAS_LEGIVEIS_INVERSO = {v: k for k, v in COLUNAS_LEGIVEIS.items()}
 

@@ -7,6 +7,7 @@ from PyQt6.QtSql import QSqlDatabase, QSqlTableModel, QSqlQuery
 from functools import partial
 import sqlite3  
 import re
+from .dialogs.edit_data.apoio_data import VALID_SITUATIONS
 
 class DispensaEletronicaModel(QObject):
     def __init__(self, database_path, parent=None):
@@ -379,9 +380,8 @@ class DispensaEletronicaModel(QObject):
         '''
 
         # Verifica se 'situacao' está dentro dos valores válidos
-        valid_situations = ["Planejamento", "Republicado", "Sessão Pública", "Homologado", "Deserto", "Fracassado", "Arquivado"]
         data['situacao'] = data.get('situacao', 'Planejamento')
-        if data['situacao'] not in valid_situations:
+        if data['situacao'] not in VALID_SITUATIONS:
             data['situacao'] = 'Planejamento'
 
         # Executa a inserção ou atualização

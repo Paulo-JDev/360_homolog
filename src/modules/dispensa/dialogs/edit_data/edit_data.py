@@ -18,6 +18,7 @@ import subprocess
 import sqlite3
 from paths import AGENTES_RESPONSAVEIS_FILE, DATA_DISPENSA_ELETRONICA_PATH, ORGANIZACOES_FILE, load_config_path_id
 from assets.styles.styles import get_dark_theme_input_style
+from .apoio_data import VALID_SITUATIONS
 
 def number_to_text(number):
     numbers_in_words = ["um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove", "dez", "onze", "doze"]
@@ -1176,7 +1177,7 @@ class EditarDadosWindow(QMainWindow):
 
         self.situacao_combo = QComboBox()
         self.situacao_combo.setStyleSheet("font-size: 14px")
-        self.situacao_combo.addItems(["Planejamento", "Republicado", "Sessão Pública", "Homologado", "Deserto", "Fracassado", "Arquivado"])
+        self.situacao_combo.addItems(VALID_SITUATIONS)
         # O valor será preenchido depois pelo populate_all_fields
         hlayout_titulo.addWidget(self.situacao_combo)
 
