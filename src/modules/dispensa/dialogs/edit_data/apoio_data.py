@@ -59,15 +59,16 @@ STYLE_STACKED_WIDGET = """
 """
 STYLE_GROUP_BOX = """
     QGroupBox {
-        border: 1px solid #3C3C5A;
+        border: 1px solid #4E648B; /* Cor da borda ajustada para o tema escuro */
         border-radius: 10px;
         font-size: 16px;
         font-weight: bold;
-        color: blac;
+        color: white;
         margin-top: 13px;
     }
-    QGroupBox:title {
+    QGroupBox::title {
         subcontrol-origin: margin;
+        padding: 0 3px;
     }
     QTextEdit {
         font-size: 14px;

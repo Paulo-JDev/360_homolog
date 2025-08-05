@@ -17,13 +17,15 @@ import os
 import subprocess
 import sqlite3
 from paths import AGENTES_RESPONSAVEIS_FILE, DATA_DISPENSA_ELETRONICA_PATH, ORGANIZACOES_FILE, load_config_path_id
+from assets.styles.styles import get_dark_theme_input_style
 
 def number_to_text(number):
     numbers_in_words = ["um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove", "dez", "onze", "doze"]
-    return numbers_in_words[number - 1] 
+    return numbers_in_words[number - 1]
 
 class EditarDadosWindow(QMainWindow):
     save_data_signal = pyqtSignal(dict)
+    disparar_email_signal = pyqtSignal(dict)
     save_data_api_signal = pyqtSignal(dict)
     request_consulta_api = pyqtSignal(str, str, str, str, str)
     status_atualizado = pyqtSignal(str, str)
@@ -50,12 +52,15 @@ class EditarDadosWindow(QMainWindow):
         self.setFixedSize(1150, 620)
         self.move(0, 0)  # Posicionar no canto superior esquerdo da tela
 
+        self.setStyleSheet(get_dark_theme_input_style())
+
         # Carrega todas as referências e widgets
         self.carregar_referencias()
 
         # Inicialização da interface gráfica e configuração da UI
         self.setup_ui()
-        self.carregar_dados_api() 
+        self.carregar_dados_api()
+        self.populate_all_fields()
 
     def carregar_referencias(self):       
         # Referências aos RadioButtons para material_servico, com_disputa e pesquisa_preco
@@ -200,6 +205,56 @@ class EditarDadosWindow(QMainWindow):
 
         return group_box
 
+    def populate_all_fields(self):
+        """
+        Pega o dicionário self.dados e preenche todos os campos
+        da interface de uma só vez.
+        """
+        # Pega o dicionário de dados. Se não existir, usa um dicionário vazio para evitar erros.
+        data = self.dados if self.dados is not None else {}
+
+        # === CABEÇALHO ===
+        self.situacao_combo.setCurrentText(data.get('situacao', 'Planejamento'))
+        self.title_label.setText(f"{data.get('tipo', 'N/A')} nº {data.get('numero', 'N/A')}/{data.get('ano', 'N/A')}")
+        self.objeto_label.setText(f"{data.get('objeto', 'N/A')} ({data.get('material_servico', 'N/A')})")
+        self.om_label.setText(f"{data.get('orgao_responsavel', 'N/A')} ({data.get('uasg', 'N/A')})")
+        
+        objeto = data.get("objeto", "N/A")
+        material_servico = data.get("material_servico", "N/A")
+        self.objeto_label.setText(f"{objeto} ({material_servico})")
+
+        orgao_responsavel = data.get("orgao_responsavel", "N/A")
+        uasg = data.get("uasg", "N/A")
+        self.om_label.setText(f"{orgao_responsavel} ({uasg})")
+
+        # === PREENCHIMENTO DA ABA "INFORMAÇÕES" ===
+        self.om_combo.setCurrentText(data.get('sigla_om', ''))
+        self.setor_responsavel_combo.setCurrentText(data.get('setor_responsavel', ''))
+        self.objeto_edit.setText(data.get('objeto', ''))
+        self.nup_edit.setText(data.get('nup', ''))
+        self.vigencia_combo.setCurrentText(data.get('vigencia', ''))
+        self.criterio_combo.setCurrentText(data.get('criterio_julgamento', ''))
+        data_sessao_str = data.get('data_sessao', '')
+        if data_sessao_str:
+            self.data_edit.setDate(QDate.fromString(data_sessao_str, "yyyy-MM-dd"))
+        
+        self.valor_total_edit.setText(str(data.get('valor_total', '')))
+        self.acao_interna_edit.setText(str(data.get('acao_interna', '')))
+        # ... continue para os outros campos desta aba ...
+
+        # === PREENCHIMENTO DA ABA "AGENTES RESPONSÁVEIS" ===
+        self.ordenador_combo.setCurrentText(data.get('ordenador_despesas', ''))
+        self.agente_fiscal_combo.setCurrentText(data.get('agente_fiscal', ''))
+        self.gerente_credito_combo.setCurrentText(data.get('gerente_de_credito', ''))
+        self.responsavel_demanda_combo.setCurrentText(data.get('responsavel_pela_demanda', ''))
+        self.operador_dispensa_combo.setCurrentText(data.get('operador', ''))
+
+        # === PREENCHIMENTO DA ABA "RESULTADOS" ===
+        self.cnpj_edit.setText(str(data.get('cnpj_matriz', '')))
+        self.sequencial_edit.setText(str(data.get('sequencial_pncp', '')))
+
+        print("--- Preenchimento concluído. ---")
+
     def save_data(self):
         # Coleta os dados dos widgets de contratação
         data_to_save = {
@@ -261,37 +316,24 @@ class EditarDadosWindow(QMainWindow):
         self.save_data_signal.emit(data_to_save)
 
     def setup_ui(self):
-        # Criando um frame para envolver o main_widget com borda
-        self.frame_container = QFrame(self)
-        self.frame_container.setObjectName("FrameContainer")  # Definindo um identificador único
-        self.frame_container.setStyleSheet("""
-            #FrameContainer {  /* Aplicando estilo APENAS neste frame */
-                border: 1px solid black; 
-                border-radius: 10px;
-                background: #f1eeee;
-            }
-        """)
-
-        # Criando o main_widget dentro do frame
-        main_widget = QWidget(self.frame_container)
-        self.setCentralWidget(self.frame_container)  # Definindo o frame como o central widget
-
-        # Criando um layout para o frame_container e adicionando main_widget
-        frame_layout = QVBoxLayout(self.frame_container)
-        frame_layout.setContentsMargins(0, 0, 0, 0)  # Remove margem interna para evitar espaçamento extra
-        frame_layout.addWidget(main_widget)
+        # O widget principal agora é o widget central diretamente.
+        main_widget = QWidget(self)
+        self.setCentralWidget(main_widget)
 
         # Configuração do layout principal no main_widget
         self.central_layout = QHBoxLayout(main_widget)
 
         # Layout esquerdo
-        Left_layout = QVBoxLayout()
-        layout_titulo = self.setup_layout_titulo()
-        Left_layout.addLayout(layout_titulo)
+        left_layout = QVBoxLayout()
+        # Passamos 'self.dados' para que a função possa usá-los na criação inicial
+        layout_titulo = self.setup_layout_titulo(self.dados)
+        left_layout.addLayout(layout_titulo)
+        
         nav_frame = self.create_navigation_layout()
-        Left_layout.addWidget(nav_frame)
-        Left_layout.addWidget(self.stacked_widget)
-        self.central_layout.addLayout(Left_layout)
+        left_layout.addWidget(nav_frame)
+        left_layout.addWidget(self.stacked_widget)
+        
+        self.central_layout.addLayout(left_layout)
 
         # Configuração dos widgets no QStackedWidget
         self.setup_stacked_widgets()
@@ -1087,15 +1129,43 @@ class EditarDadosWindow(QMainWindow):
         # Define o layout do frame e retorna o frame configurado
         frame.setLayout(layout)
         return frame
+    
+    def handle_disparar_email(self):
+        """
+        Verifica se a situação é 'Homologado' e emite um sinal para disparar o e-mail.
+        """
+        # Pega o valor ATUAL da caixa de seleção de situação
+        situacao_atual = self.situacao_combo.currentText()
+        
+        if situacao_atual == 'Homologado':
+            # Se a condição for atendida, emite o sinal com os dados atuais
+            print("Condição atendida. Emitindo sinal para disparar e-mail...")
+            
+            # Pega os dados atuais do formulário para garantir que estão atualizados
+            dados_atuais = self.get_current_form_data()
+            self.disparar_email_signal.emit(dados_atuais)
+        else:
+            # Se não, exibe um aviso ao usuário
+            QMessageBox.warning(self, "Ação não permitida",
+                                "O e-mail só pode ser disparado quando a situação do processo for 'Homologado'.")
 
-    def setup_layout_titulo(self):
-        """Configura o layout do título com o ID do processo e a seção de consulta API."""
+    def get_current_form_data(self):
+        """Coleta todos os dados atuais do formulário e retorna como um dicionário."""
+        # Esta função é um resumo do seu método save_data, apenas para coletar.
+        # Você pode copiar a lógica de coleta de dados do seu método save_data para cá.
+        dados_atuais = {}
+        dados_atuais.update(self.dados) # Começa com os dados originais
+        dados_atuais['situacao'] = self.situacao_combo.currentText()
+        dados_atuais['objeto'] = self.objeto_edit.text()
+        dados_atuais['email'] = self.email_edit.text() # Importante para o destinatário
+        dados_atuais['cp'] = self.cp_edit.text()
+        dados_atuais['nup'] = self.nup_edit.text()
+        return dados_atuais
+
+    def setup_layout_titulo(self, data):
+        """Configura o layout do título com o ID do processo."""
         layout_titulo = QHBoxLayout()
-
-        # Cria um layout vertical para o título e um layout horizontal para ícones e texto
         vlayout_titulo = QVBoxLayout()
-
-        # Layout horizontal para ícone esquerdo, título e ícone direito
         hlayout_titulo = QHBoxLayout()
 
         hlayout_titulo.addSpacerItem(QSpacerItem(20, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
@@ -1104,11 +1174,10 @@ class EditarDadosWindow(QMainWindow):
         situacao_label.setStyleSheet("font-size: 16px; font-weight: bold")
         hlayout_titulo.addWidget(situacao_label)
 
-        # Cria um combobox para a situação
         self.situacao_combo = QComboBox()
         self.situacao_combo.setStyleSheet("font-size: 14px")
         self.situacao_combo.addItems(["Planejamento", "Republicado", "Sessão Pública", "Homologado", "Deserto", "Fracassado", "Arquivado"])
-        self.situacao_combo.setCurrentText(self.dados.get('situacao', 'Planejamento'))
+        # O valor será preenchido depois pelo populate_all_fields
         hlayout_titulo.addWidget(self.situacao_combo)
 
         brasil_icon = QIcon(self.icons.get("brasil_2", None))
@@ -1117,80 +1186,48 @@ class EditarDadosWindow(QMainWindow):
         image_label_esquerda.setPixmap(brasil_icon.pixmap(30, 30))
         hlayout_titulo.addWidget(image_label_esquerda)
 
-        # Texto do título centralizado
-        tipo = self.dados.get("tipo", "N/A")
-        numero = self.dados.get("numero", "N/A")
-        ano = self.dados.get("ano", "N/A")
-        title_label = QLabel(f"{tipo} nº {numero}/{ano}", self)
-
-        # Define o tamanho da fonte para 18 e em negrito
+        self.title_label = QLabel("Carregando...", self) # Texto provisório
         font_title = QFont()
         font_title.setPointSize(18)
         font_title.setBold(True)
-        title_label.setFont(font_title)
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        hlayout_titulo.addWidget(title_label)
+        self.title_label.setFont(font_title)
+        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hlayout_titulo.addWidget(self.title_label)
 
-        # Botão "Salvar" à direita
         add_button_func("Salvar", "confirm", self.save_data, hlayout_titulo, self.icons, tooltip="Salvar os Dados")
-
-        # Ícone à direita
+        add_button_func("Disparar E-mail", "mensagem", self.handle_disparar_email, hlayout_titulo, self.icons, tooltip="Disparar e-mail")
+        
         acanto_icon = QIcon(self.icons.get("acanto", None))
         image_label_direita = QLabel()
         image_label_direita.setAlignment(Qt.AlignmentFlag.AlignCenter)
         image_label_direita.setPixmap(acanto_icon.pixmap(40, 40))
         hlayout_titulo.addWidget(image_label_direita)
 
-        # Adiciona outro espaçador para empurrar o ícone da direita
         hlayout_titulo.addSpacerItem(QSpacerItem(20, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
-
-        # Adiciona o layout horizontal ao layout vertical do título
         vlayout_titulo.addLayout(hlayout_titulo)
-
-        # Criação do objeto_label com fonte 14
-        objeto = self.dados.get("objeto", "N/A")
-        material_servico = self.dados.get("material_servico", "N/A")
-        self.objeto_label = QLabel(f"{objeto} ({material_servico})", self)
-
+        
+        self.objeto_label = QLabel("...", self) # Texto provisório
         font_objeto = QFont()
         font_objeto.setPointSize(12)
         self.objeto_label.setFont(font_objeto)
         self.objeto_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # Adiciona objeto_label ao layout de labels abaixo de title_label
         vlayout_titulo.addWidget(self.objeto_label)
-
-        hlayout_selecao_om= QHBoxLayout()
-
+        
+        hlayout_selecao_om = QHBoxLayout()
         hlayout_selecao_om.addSpacerItem(QSpacerItem(20, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
-
-        # Criação do om_label com fonte 14
-        orgao_responsavel = self.dados.get("orgao_responsavel", "N/A")
-        self.uasg = self.dados.get("uasg", "N/A")
-        self.om_label = QLabel(f"{orgao_responsavel} ({ self.uasg})", self)
-
-        font_objeto = QFont()
-        font_objeto.setPointSize(12)
-        self.om_label.setFont(font_objeto)
+        self.om_label = QLabel("...", self) # Texto provisório
+        font_om = QFont()
+        font_om.setPointSize(12)
+        self.om_label.setFont(font_om)
         self.om_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # Adiciona objeto_label ao layout de labels abaixo de title_label
         hlayout_selecao_om.addWidget(self.om_label)
-    
         hlayout_selecao_om.addSpacerItem(QSpacerItem(20, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
-
         vlayout_titulo.addLayout(hlayout_selecao_om)
 
-                # Cria a linha divisória com espaçamento e adiciona ao layout
         linha_divisoria, spacer_baixo_linha = linha_divisoria_layout()
         vlayout_titulo.addWidget(linha_divisoria)
         vlayout_titulo.addSpacerItem(spacer_baixo_linha)
-
-            # Espaçador abaixo da linha divisória
-        spacer_baixo_linha = QSpacerItem(5, 5, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
-        vlayout_titulo.addSpacerItem(spacer_baixo_linha)
-
-        # Adiciona o layout vertical com título e situação ao layout principal
+        
         layout_titulo.addLayout(vlayout_titulo)
 
         return layout_titulo

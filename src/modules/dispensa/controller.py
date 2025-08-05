@@ -153,13 +153,16 @@ class DispensaEletronicaController(QObject):
 
     def handle_edit_item(self, data):
         # Extrai informações para compor o nome da tabela
-        cnpj_matriz = data.get("cnpj_matriz")
-        sequencial_pncp = data.get("sequencial_pncp")
+        cnpj_matriz = data.get("cnpj_matriz") or ""
+        sequencial_pncp = data.get("sequencial_pncp") or ""
         ano = str(data.get("ano", "0000"))[-4:]  # Captura apenas os 4 últimos dígitos do ano
         
-        # Monta o nome da tabela com base nos dados
-        table_name = f"{cnpj_matriz}_1_{sequencial_pncp}_{ano}"
-        # print(f"DEBUG: Nome da tabela a ser verificada: {table_name}")
+        if cnpj_matriz and sequencial_pncp:
+            table_name = f"{cnpj_matriz}_1_{sequencial_pncp}_{ano}"
+        else:
+            table_name = "" # Define como vazio se os dados não existirem
+
+        print(f"DEBUG: Nome da tabela a ser verificada: {table_name}")
 
         # Conecta ao banco de dados para verificar se a tabela existe e realizar as consultas
         try:
@@ -212,6 +215,7 @@ class DispensaEletronicaController(QObject):
             data, self.icons, table_name, self.view
         )
         self.edit_data_dialog.save_data_signal.connect(self.handle_save_data)
+        self.edit_data_dialog.disparar_email_signal.connect(self._preparar_email_homologado)
         self.view.connect_editar_dados_window(self.edit_data_dialog)  # Conecta sinais
         self.edit_data_dialog.show()
     
@@ -220,9 +224,6 @@ class DispensaEletronicaController(QObject):
             # Use `self.model_add` que se refere a uma instância de `DispensaEletronicaModel`
             self.model_add.insert_or_update_data(data)
             self.view.refresh_model()  # Atualiza a visualização da tabela
-            if data.get('situacao') == 'Homologado':
-                print("Situação 'Homologado' detectada. Preparando mensagem...")
-                self._preparar_email_homologado(data)
         except AttributeError as e:
             QMessageBox.warning(self.view, "Erro", f"Ocorreu um erro ao salvar os dados: {str(e)}")
     

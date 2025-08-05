@@ -379,7 +379,7 @@ class DispensaEletronicaModel(QObject):
         '''
 
         # Verifica se 'situacao' está dentro dos valores válidos
-        valid_situations = ["Planejamento", "Aprovado", "Sessão Pública", "Homologado", "Empenhado", "Concluído", "Arquivado"]
+        valid_situations = ["Planejamento", "Republicado", "Sessão Pública", "Homologado", "Deserto", "Fracassado", "Arquivado"]
         data['situacao'] = data.get('situacao', 'Planejamento')
         if data['situacao'] not in valid_situations:
             data['situacao'] = 'Planejamento'
