@@ -73,7 +73,6 @@ STYLE_GROUP_BOX = """
         border-radius: 10px;
         font-size: 16px;
         font-weight: bold;
-        color: white;
         margin-top: 13px;
     }
     QGroupBox::title {

@@ -53,7 +53,7 @@ class EditarDadosWindow(QMainWindow):
         self.setFixedSize(1150, 620)
         self.move(0, 0)  # Posicionar no canto superior esquerdo da tela
 
-        self.setStyleSheet(get_dark_theme_input_style())
+        #self.setStyleSheet(get_dark_theme_input_style())
 
         # Carrega todas as referências e widgets
         self.carregar_referencias()
