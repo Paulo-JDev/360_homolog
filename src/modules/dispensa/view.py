@@ -94,32 +94,42 @@ class DispensaEletronicaWidget(QMainWindow):
         add_button("Gráficos", "performance", self.salvar_graficos, layout, self.icons, tooltip="Carrega dados de uma tabela")
         # 1. Criamos a QComboBox
         self.filtro_ano_combo = QComboBox()
-        self.filtro_ano_combo.setMinimumWidth(100)
-        self.filtro_ano_combo.setFixedHeight(35)
+        self.filtro_ano_combo.setMinimumWidth(80)
         self.filtro_ano_combo.setStyleSheet(get_filtro_ano_combo_style())
         self.filtro_ano_combo.setEditable(True)
         self.filtro_ano_combo.lineEdit().setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.filtro_ano_combo.lineEdit().setReadOnly(True)
-        
         self.filtro_ano_combo.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
 
-        # 3. Criamos o container (HoverFrame).
+        # 2. Criamos o container (HoverFrame).
         normal_style = get_filtro_container_style()
         hover_style = get_filtro_container_hover_style()
         filtro_container = HoverFrame(normal_style, hover_style)
         filtro_container.setFixedHeight(35)
         filtro_container.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        # 4. Conectamos o clique no container (que agora receberá todos os cliques)
+        # 3. Conectamos o clique no container à ação de abrir a lista
         filtro_container.clicked.connect(self.filtro_ano_combo.showPopup)
 
-        # 5. Montamos o layout interno.
+        # 4. Montamos o layout interno do nosso "botão".
         filtro_layout = QHBoxLayout(filtro_container)
-        filtro_layout.setContentsMargins(5, 0, 5, 0)
-        filtro_layout.setSpacing(0)
+        filtro_layout.setContentsMargins(10, 0, 5, 0)
+        filtro_layout.setSpacing(5)
+
+        # 5. Adicionamos o Ícone ao layout interno
+        icon_label = QLabel()
+        
+        # ALTERAÇÃO 1: Usando o nome correto do ícone ("calendar")
+        # ALTERAÇÃO 2: Usando o tamanho correto do ícone (30, 30)
+        icon_label.setPixmap(self.icons['calendario'].pixmap(30, 30))
+        
+        icon_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        filtro_layout.addWidget(icon_label)
+
+        # 6. Adicionamos a QComboBox ao layout interno
         filtro_layout.addWidget(self.filtro_ano_combo)
         
-        # 6. Adicionamos o container pronto ao layout principal.
+        # 7. Adicionamos o container pronto ao layout principal.
         layout.addWidget(filtro_container)
         #add_button("ConGes", "image-processing", self.salvar_print, layout, self.icons, tooltip="Abre o painel de controle do processo")
         

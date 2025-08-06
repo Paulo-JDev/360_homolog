@@ -148,5 +148,7 @@ def load_icons():
         "jigsaw": load_icon("jigsaw.png"),
         "sapiens": load_icon("sapiens.png"),
         "montagem": load_icon("montagem.png"),
+        "calendario": load_icon("calendario.png"),
+        "calendario-cor": load_icon("calendario-cor.png"),
 
                 }

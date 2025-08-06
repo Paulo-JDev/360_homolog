@@ -229,51 +229,81 @@ class DispensaEletronicaController(QObject):
     
     def _preparar_email_homologado(self, data):
         """
-        Lê o template da mensagem, preenche com os dados e abre o
-        cliente de e-mail padrão do usuário.
+        Abre o webmail, copia a mensagem para a área de transferência
+        e notifica o usuário.
         """
         destinatario_email = data.get("email", "")
         if not destinatario_email:
-            print("Não foi possível preparar a mensagem: campo de e-mail vazio.")
             QMessageBox.warning(self.view, "E-mail não encontrado",
-                                "Não foi possível preparar a mensagem automática pois o campo 'E-mail' não está preenchido.")
+                                "O campo 'E-mail' do responsável não está preenchido.")
             return
 
         try:
-            # Caminho para o arquivo de template
             caminho_template = TEMPLATE_DISPENSA_DIR / "mensagem_homologado.txt"
-
-            # Lê o conteúdo do template
             with open(caminho_template, 'r', encoding='utf-8') as f:
                 mensagem_base = f.read()
 
-            # Substitui as variáveis pelos dados reais
+            # Preenche o template
             mensagem_final = mensagem_base.replace("{{numero-da-cp}}", str(data.get("cp", "[N/A]")))
             mensagem_final = mensagem_final.replace("{{NUP}}", str(data.get("nup", "[N/A]")))
             mensagem_final = mensagem_final.replace("{{numero da dispensa}}", str(data.get("id_processo", "[N/A]")))
             
-            # Prepara o assunto do e-mail
             assunto = f"Homologação da Dispensa Eletrônica: {data.get('id_processo')}"
 
-            # Codifica o assunto e o corpo da mensagem para o formato de URL
-            assunto_codificado = quote(assunto)
-            mensagem_codificada = quote(mensagem_final)
-
-            # Cria o link 'mailto' e o abre no cliente de e-mail padrão
-            url_mailto = f"mailto:{destinatario_email}?subject={assunto_codificado}&body={mensagem_codificada}"
-            webbrowser.open(url_mailto)
+            # --- NOVA LÓGICA ---
             
-            print(f"Cliente de e-mail aberto para: {destinatario_email}")
+            # 1. Abre o site do webmail em uma nova aba
+            webbrowser.open_new_tab("https://webmail.marinha.mil.br/")
+            
+            # 2. Copia o corpo da mensagem para a área de transferência
+            clipboard = QApplication.clipboard()
+            clipboard.setText(mensagem_final)
+            
+            # 3. Exibe uma notificação para o usuário
+            QMessageBox.information(self.view, "Ação Necessária",
+                                    f"O webmail foi aberto.\n\n"
+                                    f"A mensagem para '{destinatario_email}' foi copiada para a sua área de transferência.\n\n"
+                                    f"Por favor, crie um novo e-mail, cole o destinatário e a mensagem.")
 
-        except FileNotFoundError:
-            print(f"Erro: Arquivo de template não encontrado em {caminho_template}")
-            QMessageBox.critical(self.view, "Erro de Template",
-                                 f"O arquivo de modelo 'mensagem_homologado.txt' não foi encontrado.")
+            # Opcional: Copia também o destinatário para facilitar
+            # clipboard.setText(destinatario_email) 
+            # E ajusta a mensagem acima para "O destinatário foi copiado..."
+
         except Exception as e:
-            print(f"Ocorreu um erro inesperado ao preparar a mensagem: {e}")
-            QMessageBox.critical(self.view, "Erro Inesperado",
-                                 f"Ocorreu um erro ao preparar a mensagem automática: {e}")
-            
+            QMessageBox.critical(self.view, "Erro", f"Ocorreu um erro ao preparar a mensagem: {e}")
+
+    def carregar_tabela(self):
+        """
+        Abre uma janela para o usuário selecionar um arquivo de tabela (Excel)
+        e inicia o processo de validação e importação dos dados.
+        """
+        filepath, _ = QFileDialog.getOpenFileName(
+            self.view, 
+            "Abrir arquivo de tabela", 
+            "", 
+            "Tabelas (*.xlsx *.xls *.ods)"
+        )
+        
+        if filepath:
+            try:
+                # Carrega o arquivo selecionado em um DataFrame do pandas
+                df = pd.read_excel(filepath)
+                
+                # Chama a função que você já tem para validar e processar os dados
+                self.validate_and_process_data(df)
+
+                # Insere ou atualiza cada linha do DataFrame no banco de dados
+                for _, row in df.iterrows():
+                    data = row.to_dict()
+                    self.model_add.insert_or_update_data(data)
+                
+                # Atualiza a tabela na tela para mostrar os novos dados
+                self.view.refresh_model()
+                QMessageBox.information(self.view, "Carregamento Concluído", "Dados carregados com sucesso.")
+                
+            except Exception as e:
+                QMessageBox.warning(self.view, "Erro ao Carregar", f"Ocorreu um erro ao carregar a tabela: {str(e)}")
+
     def validate_and_process_data(self, df):
         required_columns = ['ID Processo', 'NUP', 'Objeto', 'uasg']
         if not all(col in df.columns for col in required_columns):
@@ -347,3 +377,4 @@ def show_warning_if_view_exists(view, title, message):
         QMessageBox.warning(view, title, message)
     else:
         print(message)  # Mensagem para o log, caso `view` esteja indisponível
+
