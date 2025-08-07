@@ -1,1 +1,14 @@
-Teste para Automação de aviso de homologado para os setores responsáveis/interessados: {{numero-da-cp}}, {{NUP}}, {{numero da dispensa}}.
+Prezados,
+Aviso de Homologação de Processo
+
+A Dispensa Eletrônica nº **{{numero da dispensa}}** foi homologada.
+
+**NUP:** {{NUP}}
+**CP:** {{numero-da-cp}}
+
+Favor dar prosseguimento às ações necessárias.
+
+E-mail do responsável para este processo: {{email_responsavel}}.
+
+Atenciosamente,
+Sistema de Gestão 360

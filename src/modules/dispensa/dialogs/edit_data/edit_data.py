@@ -1138,7 +1138,7 @@ class EditarDadosWindow(QMainWindow):
         # Pega o valor ATUAL da caixa de seleção de situação
         situacao_atual = self.situacao_combo.currentText()
         
-        if situacao_atual == 'Homologado':
+        if situacao_atual == 'Homologado' or situacao_atual == 'Sessão Pública':
             # Se a condição for atendida, emite o sinal com os dados atuais
             print("Condição atendida. Emitindo sinal para disparar e-mail...")
             
@@ -1148,7 +1148,7 @@ class EditarDadosWindow(QMainWindow):
         else:
             # Se não, exibe um aviso ao usuário
             QMessageBox.warning(self, "Ação não permitida",
-                                "O e-mail só pode ser disparado quando a situação do processo for 'Homologado'.")
+                                "O e-mail só pode ser disparado quando a situação do processo for 'Homologado' ou 'Sessão Pública'.")
 
     def get_current_form_data(self):
         """Coleta todos os dados atuais do formulário e retorna como um dicionário."""
