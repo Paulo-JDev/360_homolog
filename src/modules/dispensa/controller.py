@@ -12,6 +12,7 @@ import os
 from modules.dispensa.dados_api.api_consulta import ConsultaAPIDialog
 import webbrowser
 from urllib.parse import quote
+from modules.utils.automacao_email import executar_automacao_email
 
 class DispensaEletronicaController(QObject): 
     def __init__(self, icons, view, model):
@@ -313,6 +314,8 @@ class DispensaEletronicaController(QObject):
             webbrowser.open(url_mailto)
             
             print(f"Cliente de e-mail aberto para: {destinatario_email}")
+
+            #executar_automacao_email(destinatario, assunto, corpo)
 
         except FileNotFoundError:
             print(f"Erro: Arquivo de template não encontrado em {caminho_template}")
