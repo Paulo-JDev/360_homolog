@@ -319,15 +319,6 @@ class DispensaEletronicaController(QObject):
             # clipboard.setText(destinatario_email) 
             # E ajusta a mensagem acima para "O destinatário foi copiado..."
 
-<<<<<<< HEAD
-=======
-            #executar_automacao_email(destinatario, assunto, corpo)
-
-        except FileNotFoundError:
-            print(f"Erro: Arquivo de template não encontrado em {caminho_template}")
-            QMessageBox.critical(self.view, "Erro de Template",
-                                 f"O arquivo de modelo 'mensagem_homologado.txt' não foi encontrado.")
->>>>>>> 0f0736a0077eac4c32e233de43a6e10569838b38
         except Exception as e:
             QMessageBox.critical(self.view, "Erro", f"Ocorreu um erro ao preparar a mensagem: {e}")
 
