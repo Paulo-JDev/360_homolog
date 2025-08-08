@@ -12,6 +12,7 @@ import os
 from modules.dispensa.dados_api.api_consulta import ConsultaAPIDialog
 import webbrowser
 from urllib.parse import quote
+from modules.utils.automacao_email import executar_automacao_email
 
 class DispensaEletronicaController(QObject): 
     def __init__(self, icons, view, model):
@@ -215,9 +216,26 @@ class DispensaEletronicaController(QObject):
             data, self.icons, table_name, self.view
         )
         self.edit_data_dialog.save_data_signal.connect(self.handle_save_data)
-        self.edit_data_dialog.disparar_email_signal.connect(self._preparar_email_homologado)
+        self.edit_data_dialog.disparar_email_signal.connect(self.handle_disparar_email)
         self.view.connect_editar_dados_window(self.edit_data_dialog)  # Conecta sinais
         self.edit_data_dialog.show()
+
+    def handle_disparar_email(self, data):
+        """
+        Este método é o SLOT que recebe os dados da view.
+        Ele verifica a situação e chama a função de e-mail apropriada.
+        """
+        situacao = data.get('situacao')
+        print(f"Controller recebeu sinal para disparar e-mail. Situação: {situacao}")
+
+        if situacao == 'Homologado':
+            self._preparar_email_homologado(data)
+        elif situacao == 'Sessão Pública':
+            self._preparar_email_sessao_publica(data)
+        else:
+            # O aviso de "ação não permitida" é agora responsabilidade da View.
+            # O controller apenas não faz nada se a situação não for uma das esperadas.
+            print(f"Nenhuma ação de e-mail configurada para a situação: {situacao}")
     
     def handle_save_data(self, data):
         try:
@@ -226,6 +244,36 @@ class DispensaEletronicaController(QObject):
             self.view.refresh_model()  # Atualiza a visualização da tabela
         except AttributeError as e:
             QMessageBox.warning(self.view, "Erro", f"Ocorreu um erro ao salvar os dados: {str(e)}")
+
+    def _preparar_email_sessao_publica(self, data):
+        """
+        Lê o template da mensagem de Sessão Pública e abre o cliente de e-mail.
+        """
+        destinatario_email = data.get("email", "")
+        if not destinatario_email:
+            QMessageBox.warning(self.view, "E-mail não encontrado", "O campo 'E-mail' não está preenchido.")
+            return
+
+        try:
+            caminho_template = TEMPLATE_DISPENSA_DIR / "mensagem_sessaopublica.txt"
+            with open(caminho_template, 'r', encoding='utf-8') as f:
+                mensagem_base = f.read()
+
+            mensagem_final = mensagem_base.replace("{{numero-da-cp}}", str(data.get("cp", "[N/A]")))
+            mensagem_final = mensagem_final.replace("{{NUP}}", str(data.get("nup", "[N/A]")))
+            mensagem_final = mensagem_final.replace("{{numero da dispensa}}", str(data.get("id_processo", "[N/A]")))
+            
+            assunto = f"Início da Sessão Pública - Dispensa Eletrônica: {data.get('id_processo')}"
+
+            assunto_codificado = quote(assunto)
+            mensagem_codificada = quote(mensagem_final)
+            url_mailto = f"mailto:{destinatario_email}?subject={assunto_codificado}&body={mensagem_codificada}"
+            webbrowser.open(url_mailto)
+
+        except FileNotFoundError:
+            QMessageBox.critical(self.view, "Erro de Template", "O arquivo 'mensagem_sessaopublica.txt' não foi encontrado.")
+        except Exception as e:
+            QMessageBox.critical(self.view, "Erro", f"Ocorreu um erro ao preparar a mensagem: {e}")
     
     def _preparar_email_homologado(self, data):
         """
@@ -247,6 +295,8 @@ class DispensaEletronicaController(QObject):
             mensagem_final = mensagem_base.replace("{{numero-da-cp}}", str(data.get("cp", "[N/A]")))
             mensagem_final = mensagem_final.replace("{{NUP}}", str(data.get("nup", "[N/A]")))
             mensagem_final = mensagem_final.replace("{{numero da dispensa}}", str(data.get("id_processo", "[N/A]")))
+            mensagem_final = mensagem_final.replace("{{email_responsavel}}", str(data.get("email", "[E-mail não informado]")))
+            destinatario_email = data.get("email", "")
             
             assunto = f"Homologação da Dispensa Eletrônica: {data.get('id_processo')}"
 
@@ -269,6 +319,15 @@ class DispensaEletronicaController(QObject):
             # clipboard.setText(destinatario_email) 
             # E ajusta a mensagem acima para "O destinatário foi copiado..."
 
+<<<<<<< HEAD
+=======
+            #executar_automacao_email(destinatario, assunto, corpo)
+
+        except FileNotFoundError:
+            print(f"Erro: Arquivo de template não encontrado em {caminho_template}")
+            QMessageBox.critical(self.view, "Erro de Template",
+                                 f"O arquivo de modelo 'mensagem_homologado.txt' não foi encontrado.")
+>>>>>>> 0f0736a0077eac4c32e233de43a6e10569838b38
         except Exception as e:
             QMessageBox.critical(self.view, "Erro", f"Ocorreu um erro ao preparar a mensagem: {e}")
 
