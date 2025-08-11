@@ -395,62 +395,50 @@ class ConsolidarDocumentos(QObject):
         docx_path = Path(docx_path) if not isinstance(docx_path, Path) else docx_path
         pdf_path = docx_path.with_suffix('.pdf')
         
+        # Lógica para Windows
         if sys.platform.startswith("win"):
             word = None
             doc = None
             try:
-                # Importa as bibliotecas necessárias para a automação
                 import win32com.client
                 import pythoncom
 
-                # Inicializa a comunicação COM para esta thread (essencial em apps com GUI)
+                # Inicializa a comunicação COM (essencial em apps com interface gráfica)
                 pythoncom.CoInitialize()
 
-                # Inicia o Word. Para depurar, você pode remover o comentário da linha abaixo
-                # para ver o que o Word está fazendo.
                 word = win32com.client.Dispatch("Word.Application")
-                # word.Visible = True 
+                word.Visible = False # Mantém o Word invisível
 
-                # Abre o documento usando o caminho absoluto para evitar ambiguidades
+                # Abre o documento usando o caminho absoluto
                 doc = word.Documents.Open(str(docx_path.resolve()))
                 
-                # Salva o documento como PDF
-                doc.SaveAs(str(pdf_path.resolve()), FileFormat=17) # 17 é o código para PDF
+                # Salva como PDF
+                doc.SaveAs(str(pdf_path.resolve()), FileFormat=17)
 
-                # COMANDO CRÍTICO: Fecha o documento antes de fechar o Word.
-                # O parâmetro SaveChanges=0 diz ao Word para NÃO salvar nenhuma alteração
-                # no template (causa comum de caixas de diálogo ocultas).
+                # COMANDO CRÍTICO: Fecha o documento SEM salvar alterações no modelo.
+                # Isso evita as caixas de diálogo ocultas que travam o Word.
                 doc.Close(SaveChanges=0)
                 
             except Exception as e:
-                # Gera uma mensagem de erro mais detalhada no console
                 error_message = f"Falha na conversão para PDF: {e}\nDocumento: {docx_path}"
                 print(error_message)
-                # Propaga o erro para que o resto do programa saiba que a conversão falhou
-                raise Exception(error_message)
+                raise Exception(error_message) # Propaga o erro
                 
             finally:
-                # Este bloco SEMPRE será executado, mesmo que ocorra um erro.
-                # Ele garante que o Word seja fechado e os recursos liberados.
+                # Este bloco SEMPRE é executado, garantindo que o Word feche.
                 if word is not None:
                     word.Quit()
                 
-                # Libera os objetos COM da memória para evitar processos zumbis
                 doc = None
                 word = None
                 
-                # Finaliza a comunicação COM
-                pythoncom.CoUninitialize()
+                pythoncom.CoUninitialize() # Finaliza a comunicação COM
+        
+        # Lógica para outros sistemas (Linux/macOS)
         else:
-            # Bloco para Linux/macOS permanece o mesmo
             try:
-                comando = [
-                    "libreoffice",
-                    "--headless",
-                    "--convert-to", "pdf",
-                    "--outdir", str(docx_path.parent),
-                    str(docx_path)
-                ]
+                comando = ["libreoffice", "--headless", "--convert-to", "pdf",
+                           "--outdir", str(docx_path.parent), str(docx_path)]
                 subprocess.run(comando, check=True)
             except Exception as e:
                 raise e
