@@ -13,6 +13,7 @@ from modules.dispensa.dados_api.api_consulta import ConsultaAPIDialog
 import webbrowser
 from urllib.parse import quote
 from modules.utils.automacao_email import executar_automacao_email
+from modules.utils.automacao_coordenadas import executar_automacao_email_coords
 
 class DispensaEletronicaController(QObject): 
     def __init__(self, icons, view, model):
@@ -262,13 +263,32 @@ class DispensaEletronicaController(QObject):
             mensagem_final = mensagem_base.replace("{{numero-da-cp}}", str(data.get("cp", "[N/A]")))
             mensagem_final = mensagem_final.replace("{{NUP}}", str(data.get("nup", "[N/A]")))
             mensagem_final = mensagem_final.replace("{{numero da dispensa}}", str(data.get("id_processo", "[N/A]")))
-            
+            mensagem_final = mensagem_final.replace("{{email_responsavel}}", str(data.get("email", "[E-mail não informado]")))
+            destinatario_email = data.get("email", "")
+
             assunto = f"Início da Sessão Pública - Dispensa Eletrônica: {data.get('id_processo')}"
 
-            assunto_codificado = quote(assunto)
-            mensagem_codificada = quote(mensagem_final)
-            url_mailto = f"mailto:{destinatario_email}?subject={assunto_codificado}&body={mensagem_codificada}"
-            webbrowser.open(url_mailto)
+            # 1. Abre o site do webmail em uma nova aba
+            webbrowser.open_new_tab("https://webmail.marinha.mil.br/")
+            
+            # 2. Copia o corpo da mensagem para a área de transferência
+            clipboard = QApplication.clipboard()
+            clipboard.setText(mensagem_final)
+            
+            # 3. Exibe uma notificação para o usuário
+            QMessageBox.information(self.view, "Ação Necessária",
+                                    f"O webmail foi aberto.\n\n"
+                                    f"A mensagem para '{destinatario_email}' foi copiada para a sua área de transferência.\n\n"
+                                    f"Por favor, crie um novo e-mail, cole o destinatário e a mensagem.")
+
+            # Opcional: Copia também o destinatário para facilitar
+            #clipboard.setText(destinatario_email) 
+            # E ajusta a mensagem acima para "O destinatário foi copiado..."
+
+            corpo = mensagem_final.replace("{{numero da dispensa}}", str(data.get("id_processo", "[N/A]")))
+            assunto = f"Início da Sessão Pública - Dispensa Eletrônica: {data.get('id_processo')}"
+
+            executar_automacao_email_coords(destinatario_email, assunto, corpo)
 
         except FileNotFoundError:
             QMessageBox.critical(self.view, "Erro de Template", "O arquivo 'mensagem_sessaopublica.txt' não foi encontrado.")
@@ -316,8 +336,15 @@ class DispensaEletronicaController(QObject):
                                     f"Por favor, crie um novo e-mail, cole o destinatário e a mensagem.")
 
             # Opcional: Copia também o destinatário para facilitar
-            # clipboard.setText(destinatario_email) 
+            #clipboard.setText(destinatario_email) 
             # E ajusta a mensagem acima para "O destinatário foi copiado..."
+
+            corpo = corpo.replace("{{email_responsavel}}", str(data.get("email", "[E-mail não informado]")))
+            assunto = f"Homologação da Dispensa Eletrônica: {data.get('id_processo')}"
+
+            # --- MUDANÇA PRINCIPAL ---
+            # Chama a nova função de automação baseada em coordenadas
+            executar_automacao_email_coords(destinatario_email, assunto, corpo)
 
         except Exception as e:
             QMessageBox.critical(self.view, "Erro", f"Ocorreu um erro ao preparar a mensagem: {e}")
